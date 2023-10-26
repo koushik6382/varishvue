@@ -1,0 +1,42 @@
+image: atlassian/default-image:3
+options:
+  docker: true
+  size: 2x
+pipelines:
+  branches:
+    master:
+      - step:
+          name: Deploy to Registry
+          services:
+            - docker
+          script:
+            - export CONTAINER_NAME=myreceivals-vue
+            - export IMAGE_NAME=$REGISTRY_URL/$CONTAINER_NAME:$BITBUCKET_COMMIT
+            - docker login $REGISTRY_URL -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD
+            - docker build -t $IMAGE_NAME .
+            - docker push $IMAGE_NAME
+
+      - step:
+          name: Deploy to Droplet
+          services:
+            - docker
+          script:
+            - export CONTAINER_NAME=myreceivals-vue
+            - export EXTERNAL_PORT=4009
+            - export INTERNAL_PORT=4009
+            - export NETWORK=mynetwork
+            - export SSH_USER=root
+            - export SSH_SERVER=137.184.112.173
+            - export IMAGE_NAME=$REGISTRY_URL/$CONTAINER_NAME:$BITBUCKET_COMMIT
+            - pipe: atlassian/ssh-run:0.2.2
+              variables:
+                SSH_USER: $SSH_USER
+                SERVER: $SSH_SERVER
+                COMMAND: >
+                  docker login $REGISTRY_URL -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD;
+                  docker rm -f $CONTAINER_NAME;
+                  docker run -d --log-opt max-size=10m --log-opt max-file=5 --restart always --name $CONTAINER_NAME -p $EXTERNAL_PORT:$INTERNAL_PORT --network $NETWORK $IMAGE_NAME
+definitions:
+  services:
+    docker:
+      memory: 4096

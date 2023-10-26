@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+._text-color {
+    @apply text-black dark:text-white;
+  }
+
+._bg-sp{
+  @apply bg-slate-200 dark:bg-primary
+}
